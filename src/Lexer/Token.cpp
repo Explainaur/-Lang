@@ -1,7 +1,9 @@
 #include "Token.h"
 
-Token::Token(int line) {
+Token::Token(int line, TokenType type, std::string value) {
     this -> lineNumber = line;
+    this -> type = type;
+    this -> value = value;
 }
 
 TokenType Token::getType(void) {
@@ -10,12 +12,4 @@ TokenType Token::getType(void) {
 
 std::string Token::getVal(void) {
     return this -> value;
-}
-
-void Token::setType(TokenType type) {
-    this -> type = type;
-}
-
-void Token::set(std::string val) {
-    this -> value = val;
 }

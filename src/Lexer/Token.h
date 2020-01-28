@@ -11,11 +11,10 @@ class Token {
         TokenType type;
         std::string value;
     public:
-        Token(int line);
+        Token();
+        Token(int, TokenType, std::string);
         TokenType getType(void);
         std::string getVal(void);
-        void set(std::string);
-        void setType(TokenType);
 };
 
 #endif
