@@ -2,7 +2,7 @@
 
 namespace {
     bool IsIdChar(char i) {
-        return i != '=' && i !=
+        return i != '=' && i != ''
     }
 }
 
