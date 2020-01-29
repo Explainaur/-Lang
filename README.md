@@ -4,7 +4,20 @@
 因为不想实现return所以他是个类似scala的函数式语言，于是要实现Func类型变量...
 
 ## BNF
-理论上这里要写BNF但是...一言难尽
+```BNF
+program ::= {func_def} + {statement}
+func_def ::= 'def' id '(' params ')' '{'{statement}'}'
+assign ::= array_assign | var_assign | func_assign
+array_assign ::= id '=' '[' expr {',' expr} ']'
+var_assign ::= id '=' expr | factor
+func_assign ::= id '=' id
+params ::= {factor [',' factor]}
+statement ::= if | while | assign | expr | nil (';' | EOL)
+if ::= if expr '{' {statement} '}' [ 'else' {statement} ]
+while ::= 'while' expr '{' {statement} '}'
+expr ::= factor {OP factor }
+factor ::= Number | id | String
+```
 
 ## 语法规则
 数据类型暂时只有int和string,语句之间要么换行要么分号和golang一样。数组之后再加。  

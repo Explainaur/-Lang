@@ -6,7 +6,7 @@
 
 class Lexer {
     private:
-        int cur_line = 1;
+        int cur_line;
         std::istream &in;
         char cur_pos;
         Token cur_token;
@@ -18,7 +18,7 @@ class Lexer {
         bool isEOL() { return cur_pos == '\r' || cur_pos == '\n' || in.eof();}
 
     public:
-        Lexer(std::istream &in_) : in(in_), cur_pos(0) { nextChar(); } 
+        Lexer(std::istream &in_) : cur_line(1), in(in_), cur_pos(0) { nextChar(); } 
         void set(int, string, Type);
         Token nextToken();
         Token handleComment();
