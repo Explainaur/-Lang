@@ -59,9 +59,10 @@ Token Lexer::handleNum() {
 }
 
 Token Lexer::handleId() {
+    log_msg("cur_char_in_handleID: %c", cur_pos);
     int line;
     string id;
-    while (IsIdChar(cur_pos)) {
+    while (IsIdChar(cur_pos) && !in.eof()) {
         id += cur_pos;
         nextChar();
     }
