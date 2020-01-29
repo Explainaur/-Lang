@@ -3,14 +3,17 @@
 #include "../../util/error.h"
 
 namespace {
-    bool isOPChar(char ch) {
+    bool IsOPChar(char ch) {
         for(char i : op) {
             if (i == ch) return true;
         }
         return false;
     }
-    bool isIdChar(char ch) {
-        return ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch >= 'Z') || (ch >= '0' && ch <= '9') && !isOPChar(ch));
+    bool IsIdChar(char ch) {
+        return ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch >= 'Z') || (ch >= '0' && ch <= '9') && !IsOPChar(ch));
+    }
+    bool IsComment(char ch) {
+        return (ch == '@' || ch == '?');
     }
 }
 
@@ -23,11 +26,11 @@ Token Lexer::nextToken() {
     // eat space
     while (!isEOL() && (std::isspace(cur_pos) || cur_pos == 2)) nextChar();
 
-    if (cur_pos == '?') return handleComment();
+    if (IsComment(cur_pos)) return handleComment();
     if (std::isdigit(cur_pos)) return handleNum();
-    if (isIdChar(cur_pos)) return handleId();
+    if (IsIdChar(cur_pos)) return handleId();
     if (cur_pos == '"') return handleStr();
-    if (isOPChar(cur_pos)) return handleOP();
+    if (IsOPChar(cur_pos)) return handleOP();
     if (isEOL()) return handleEOL();
 
     err_quit("invalid token at line %d, the char is %c", cur_line, cur_pos);
@@ -56,12 +59,14 @@ Token Lexer::handleNum() {
 }
 
 Token Lexer::handleId() {
+    int line;
     string id;
-    while (!isEOL() && isIdChar(cur_pos)) {
+    while (IsIdChar(cur_pos)) {
         id += cur_pos;
         nextChar();
     }
-    set(cur_line, id, Type::Identifier);
+    isEOL() ? line = cur_line - 1 : line = cur_line;
+    set(line, id, Type::Identifier);
     return cur_token;
 }
 
@@ -97,6 +102,7 @@ Token Lexer::handleOP() {
             break;
     }
     set(cur_line, val, Type::OP);
+    nextChar();
     return cur_token;
 }
 
