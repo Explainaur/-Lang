@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "define.h"
+#include "../define/define.h"
 #include "../../util/error.h"
 
 namespace {
@@ -48,6 +48,9 @@ Token Lexer::handleComment() {
     return nextToken();
 }
 
+/*
+ * FIXME: Support negetive number.
+ */
 Token Lexer::handleNum() {
     string val;
     while (!isEOL() && std::isdigit(cur_pos)) {
