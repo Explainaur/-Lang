@@ -29,10 +29,10 @@ void err_quit(const char *fmt, ...) {
 }
 
 /* 
- * Nonfatal error
+ * Log system
  * Print a message and return.
  */
-void err_msg(const char *fmt, ...) {
+void log_msg(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     err_doit(0, 0, fmt, ap);

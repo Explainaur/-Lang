@@ -7,15 +7,15 @@
 理论上这里要写BNF但是...一言难尽
 
 ## 语法规则
-数据类型暂时只有int和string,语句之间要么换行要么分号和golang一样。数组之后再加。
-**Assginment**
+数据类型暂时只有int和string,语句之间要么换行要么分号和golang一样。数组之后再加。  
+**Assginment**  
 ```
 foo = 1
 bar = "hello world"
 foo = 1; bar = 2
 ```
 
-**while**
+**while**  
 ```
 sum = 0
 while i < 100 {
@@ -25,7 +25,7 @@ while i < 100 {
 sum
 ```
 
-**if**
+**if**  
 ```
 foo = 1
 bar = 2
@@ -36,8 +36,8 @@ if foo = 1 {
 }
 bar
 ```
+**Function**  
 若有多个参数用逗号隔开
-**Function**
 ```
 def fact(n) {
     f = 1
