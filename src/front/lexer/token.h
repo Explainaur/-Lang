@@ -3,7 +3,7 @@
 
 #include <string>
 
-enum Type {String, Number, Identifier, OP};
+enum Type {String, Number, Identifier, OP, Keyword};
 using string = std::string;
 
 class Token {

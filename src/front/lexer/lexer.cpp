@@ -9,11 +9,20 @@ namespace {
         }
         return false;
     }
+
     bool IsIdChar(char ch) {
         return ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch >= 'Z') || (ch >= '0' && ch <= '9') && !IsOPChar(ch));
     }
+
     bool IsComment(char ch) {
         return (ch == '@' || ch == '?');
+    }
+
+    bool IsKeyword(string str) {
+        for(string i : keyword) {
+            if (i == str) return true;
+        }
+        return false;
     }
 }
 
@@ -52,24 +61,28 @@ Token Lexer::handleComment() {
  * FIXME: Support negetive number.
  */
 Token Lexer::handleNum() {
+    int line;
     string val;
     while (!isEOL() && std::isdigit(cur_pos)) {
         val += cur_pos;
         nextChar();
     }
-    set(cur_line, val, Type::Number);
+    (isEOL() && !in.eof()) ? line = cur_line - 1 : line = cur_line;
+    set(line, val, Type::Number);
     return cur_token;
 }
 
 Token Lexer::handleId() {
     int line;
     string id;
+    Type type;
     while (IsIdChar(cur_pos) && !in.eof()) {
         id += cur_pos;
         nextChar();
     }
     isEOL() ? line = cur_line - 1 : line = cur_line;
-    set(line, id, Type::Identifier);
+    IsKeyword(id) ? type = Type::Keyword : Type::Identifier;
+    set(line, id, type);
     return cur_token;
 }
 
@@ -87,22 +100,26 @@ Token Lexer::handleStr() {
 }
 
 Token Lexer::handleOP() {
+    int line;
     string val;
     val += cur_pos;
     // check if '>=' '==' '<='
     switch (cur_pos) {
-        case '=':
+        case '=': {
             nextChar();
             (cur_pos == '=') ? val += cur_pos : val;
             break;
-        case '>':
+        }
+        case '>': {
             nextChar();
             (cur_pos == '=') ? val += cur_pos : val;
             break;
-        case '<':
+        }
+        case '<': {
             nextChar();
             (cur_pos == '=') ? val += cur_pos : val;
             break;
+        }
     }
     set(cur_line, val, Type::OP);
     nextChar();

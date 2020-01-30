@@ -15,8 +15,9 @@ params ::= {factor [',' factor]}
 statement ::= if | while | assign | expr | nil (';' | EOL)
 if ::= if expr '{' {statement} '}' [ 'else' {statement} ]
 while ::= 'while' expr '{' {statement} '}'
-expr ::= factor {OP factor }
-factor ::= Number | id | String
+expr ::= expr {+|- term}
+term ::= term {*|/ factor}
+factor ::= Number | id | String | (expr)
 ```
 
 ## 语法规则

@@ -9,7 +9,7 @@ int main() {
     Lexer lexer = Lexer(fd);
     for(int i=0;i<25;i++) {
         token = lexer.nextToken();
-        cout << "line: " << token.line() << "\tvalue: " << token.val() << endl;
+        cout << "line: " << token.line() << " value: " << token.val() << endl;
     }
     return 0;
 }
