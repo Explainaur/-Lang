@@ -1,11 +1,11 @@
-#include "ast.h"
+#include "src/front/parser/ast.h"
 
-template <typename T>
-Valptr FactorAST<T>::Eval() {}
+Valptr FactorAST::Eval() { return std::make_shared<Value>(); }
 
-template <typename T, typename L, typename R>
-Valptr StateAST<T, L, R>::Eval() {}
+Valptr AssignAST::Eval() { return std::make_shared<Value>(); }
 
-Valptr FuncDefAST::Eval() {}
+Valptr ArithAST::Eval() { return std::make_shared<Value>(); }
 
-Valptr FuncAST::Eval() {}
+Valptr FuncDefAST::Eval() { return std::make_shared<Value>(); }
+
+Valptr FuncAST::Eval() { return std::make_shared<Value>(); }

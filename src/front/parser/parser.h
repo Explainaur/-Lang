@@ -8,11 +8,16 @@ class Parser {
     private:
         Lexer lexer;
         Token token;
+        Token prev;
 
     public:
         Parser(Lexer &lexer_) : lexer(lexer_) {}
         bool match(char);
-        Token nextToken() { token = lexer.nextToken(); }
+        bool match(string);
+        bool match(const char *);
+        
+        void nextToken() { token = lexer.nextToken(); }
+        
         ASTptr parseExpr();
         ASTptr parseAssign(Token id);
         ASTptr parseDefine();
@@ -21,6 +26,9 @@ class Parser {
         ASTptr parseFunc();
         ASTptr parseTerm();
         ASTptr parseFactor();
+
+        bool isFactor(ASTptr);
+        bool isTermSameType(ASTptr, ASTptr);
 };
 
 #endif

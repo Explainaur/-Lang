@@ -6,37 +6,56 @@
 
 class BaseAST {
     private:
-        FactorType type = FactorType::Nil;
+        FactorType type_ = FactorType::Nil;
 
     public:
-        virtual ~BaseAST() = default;
-        virtual Valptr Eval() = 0;
-        virtual FactorType type();
+        virtual ~BaseAST() {};
+        virtual Valptr Eval() { return Valptr(); };
+        virtual FactorType type() { return type_; };
+        virtual string svalue() { return string(""); };
+        virtual int ivalue() { return 0; };
 };
 
-/*
- * StringAST: 
- *  T = string; type = FactorType::String
- * 
- * NumberAST:
- *  T = int; type = FactorType::Number
- * 
- * IdAST:
- *  T = string; type = FactorType::Identifier
- */
-template <typename T>
+
 class FactorAST : public BaseAST {
     private:
-        T value;
-        FactorType type;
+        FactorType type_;
 
     public:
-        FactorAST(T val, FactorType type_)
-            : value(val), type(type_) {}
-        Valptr Eval() override;
-        FactorType type() { return type; }
+        FactorAST(FactorType type) : type_(type) {}
+        virtual Valptr Eval() override;
+        virtual FactorType type() { return type_; }
 };
 
+class NumAST : public FactorAST {
+    private:
+        int value_;
+
+    public:
+        NumAST(int val, FactorType type)
+            : value_(val), FactorAST(type) {}
+        int ivalue() { return value_; }
+};
+
+class StringAST : public FactorAST {
+    private:
+        string value_;
+
+    public:
+        StringAST(string val, FactorType type)
+            : value_(val), FactorAST(type) {}
+        string svalue() { return value_; }
+};
+
+class IdAst : public FactorAST {
+    private:
+        string id;
+
+    public:
+        IdAst(string id_, FactorType type)
+            : id(id_), FactorAST(type) {}
+        string svalue() { return id; }
+};
 
 /*
  * id = "string"

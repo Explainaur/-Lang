@@ -9,7 +9,10 @@
 
 #include "env.h"
 
-char op[] = {
+// extern char oper[];
+// extern std::string keyword[];
+
+static char oper[] = {
     '+', '-', '*', '/',
     '{', '}', '[', ']', 
     '<', '>', '=', '!',
@@ -25,9 +28,9 @@ using Valptr = std::shared_ptr<Value>;
 using Args = std::vector<string>;
 using Block = std::vector<ASTptr>;
 
-enum FactorType {FString, FNumber, FIdentifier, Nil};
+enum FactorType {FString, FNumber, FIdentifier, FunCall, Nil};
 enum StatType {Assign, Arithmetic, While, If};
 
-string keyword[] = {"if", "else", "while", "def", "print"};
+static string keyword[] = {"if", "else", "while", "def", "print"};
 
 #endif

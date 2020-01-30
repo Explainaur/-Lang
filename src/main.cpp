@@ -1,5 +1,6 @@
 #include <iostream>
 #include "front/lexer/lexer.h"
+#include "front/parser/parser.h"
 #include <fstream>
 using namespace std;
 int main() {
@@ -7,9 +8,8 @@ int main() {
     fd.open("../test/a.x", ios::in);
     Token token;
     Lexer lexer = Lexer(fd);
-    for(int i=0;i<25;i++) {
-        token = lexer.nextToken();
-        cout << "line: " << token.line() << " value: " << token.val() << endl;
-    }
+    Parser parser = Parser(lexer);
+
+    
     return 0;
 }

@@ -1,10 +1,10 @@
-#include "lexer.h"
-#include "../define/define.h"
-#include "../../util/error.h"
+#include "src/front/lexer/lexer.h"
+#include "src/front/define/define.h"
+#include "src/util/error.h"
 
 namespace {
     bool IsOPChar(char ch) {
-        for(char i : op) {
+        for(char i : oper) {
             if (i == ch) return true;
         }
         return false;
