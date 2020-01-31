@@ -28,6 +28,7 @@ class Parser {
         ASTptr parseFactor();
 
         bool isFactor(ASTptr);
+        bool isTermNum(ASTptr);
         bool isTermSameType(ASTptr, ASTptr);
 };
 

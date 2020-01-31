@@ -17,7 +17,7 @@ static char oper[] = {
     '{', '}', '[', ']', 
     '<', '>', '=', '!',
     '"', '$', '~', '|',
-    '(', ')', ',', '.'
+    '(', ')', ',', '.', ';'
 };
 
 class BaseAST;
@@ -28,7 +28,7 @@ using Valptr = std::shared_ptr<Value>;
 using Args = std::vector<string>;
 using Block = std::vector<ASTptr>;
 
-enum FactorType {FString, FNumber, FIdentifier, FunCall, Nil};
+enum FactorType {FString, FNumber, FIdentifier, FunCall, FArithmetic, Nil};
 enum StatType {Assign, Arithmetic, While, If};
 
 static string keyword[] = {"if", "else", "while", "def", "print"};

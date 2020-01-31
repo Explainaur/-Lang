@@ -1,5 +1,6 @@
 #include "src/front/parser/parser.h"
 #include "src/util/error.h"
+#include <iostream>
 
 namespace {
     const char String2char(string str) {
@@ -20,7 +21,7 @@ namespace {
     }
 
     ASTptr BuildId(string id) {
-        return std::make_unique<IdAst>(id, FactorType::FIdentifier);
+        return std::make_unique<IdAST>(id, FactorType::FIdentifier);
     }
 
     ASTptr BuildAssign(ASTptr id, ASTptr val) {
@@ -28,7 +29,8 @@ namespace {
     }
 
     ASTptr BuildArith(string op, ASTptr left, ASTptr right) {
-        return std::make_unique<ArithAST>(op, move(left), move(right));
+        return std::make_unique<ArithAST>(op, move(left), move(right),
+            FactorType::FArithmetic);
     }
 
 }
@@ -50,21 +52,27 @@ bool Parser::isFactor(ASTptr ptr) {
     (ptr->type() == FactorType::FIdentifier);
 }
 
+bool Parser::isTermNum(ASTptr ptr) {
+    return (ptr->type() == FactorType::FNumber);
+}
+
 bool Parser::isTermSameType(ASTptr left, ASTptr right) {
     switch (left->type()) {
         case FactorType::FIdentifier:
             return true;    // do check when run
         case FactorType::FunCall:
             return true;
+        case FactorType::FArithmetic:
+            return true;
         case FactorType::FNumber: {
-            if (right->type() != FactorType::FNumber){
+            if (right->type() == FactorType::FString){
                 return false;
             } else {
                 return true;
             }
         }
         case FactorType::FString: {
-            if (right->type() != FactorType::FString){
+            if (right->type() == FactorType::FNumber){
                 return false;
             } else {
                 return true;
@@ -79,8 +87,6 @@ ASTptr Parser::parseAssign(Token id) {
         err_quit("Expect for Identifier at line %d", id.line());
 
     ASTptr idAST = BuildId(id.val());
-    // eat '='
-    nextToken();
 
     auto exprAST = parseExpr();
     if (!exprAST) return nullptr;
@@ -88,9 +94,16 @@ ASTptr Parser::parseAssign(Token id) {
 }
 
 ASTptr Parser::parseExpr() {
-    ASTptr temp = parseTerm();
-    ASTptr right;
+
+    std::cout << "EType is " << token.type2Str() << " Value is " << token.val() << std::endl;
     
+    if (token.type() == Type::End)
+        return nullptr;
+    ASTptr temp = parseTerm();
+    
+    temp->print();
+
+    ASTptr right;
     while (match('+')  || match('-')  || 
            match("==") || match("<=") ||
            match(">=") || match(">")  || 
@@ -100,7 +113,7 @@ ASTptr Parser::parseExpr() {
                 // eat '+'
                 nextToken();
                 right = parseTerm();
-                if (isTermSameType(move(temp), move(right))) {
+                if (isTermSameType(temp->clone(), right->clone())) {
                     temp = BuildArith(string("+"), move(temp), move(right));
                 } else {
                     err_quit("Different type for '+' is not allow at line %d", token.line());
@@ -111,10 +124,10 @@ ASTptr Parser::parseExpr() {
                 // eat '-'
                 nextToken();
                 right = parseTerm();
-                if (isTermSameType(move(temp), move(right))) {
+                if (isTermNum(temp->clone()) && isTermNum(right->clone())) {
                     temp = BuildArith(string("-"), move(temp), move(right));
                 } else {
-                    err_quit("Different type for '-' is not allow at line %d", token.line());
+                    err_quit("String type for '-' is not allow at line %d", token.line());
                 }
                 break;
             }
@@ -124,13 +137,14 @@ ASTptr Parser::parseExpr() {
                     // eat '=='
                     nextToken();
                     right = parseTerm();
-                    if (isTermSameType(move(temp), move(right))) {
+                    if (isTermSameType(temp->clone(), right->clone())) {
                         temp = BuildArith(string("=="), move(temp), move(right));
                     } else {
                         err_quit("Different type for == is not allow at line %d", token.line());
                     }
                 } else if ((token.val() == string("="))) {
                     // eat '='
+                    log_msg("assign !!! prev is %s", prev.val().c_str());
                     nextToken();
                     if (prev.type() == Type::Identifier)
                         temp = parseAssign(prev);
@@ -145,10 +159,10 @@ ASTptr Parser::parseExpr() {
                 // eat '>' or '>='
                 nextToken();
                 right = parseTerm();
-                if(isTermSameType(move(temp), move(right))) {
+                if(isTermNum(temp->clone()) && isTermNum(right->clone())) {
                     BuildArith(op, move(temp), move(right));
                 } else {
-                    err_quit("Different type for %s is not allow at line %d",
+                    err_quit("String type for %s is not allow at line %d",
                         op.c_str(), token.line());
                 }
                 break;
@@ -159,10 +173,10 @@ ASTptr Parser::parseExpr() {
                 // eat '>' or '>='
                 nextToken();
                 right = parseTerm();
-                if(isTermSameType(move(temp), move(right))) {
+                if(isTermNum(temp->clone()) && isTermNum(right->clone())) {
                     BuildArith(op, move(temp), move(right));
                 } else {
-                    err_quit("Different type for %s is not allow at line %d",
+                    err_quit("String type for %s is not allow at line %d",
                         op.c_str(), token.line());
                 }
                 break;
@@ -170,10 +184,15 @@ ASTptr Parser::parseExpr() {
         }   // switch end
     }   // while end
 
-    return move(temp);
+
+    log_msg("return success!\n");
+    return temp;
 }
 
 ASTptr Parser::parseTerm() {
+    
+    std::cout << "TType is " << token.type2Str() << " Value is " << token.val() << std::endl;
+    
     ASTptr temp = parseFactor();
     ASTptr right;
     while (match('*') || match('/')) {
@@ -182,7 +201,7 @@ ASTptr Parser::parseTerm() {
                 // eat '*'
                 nextToken();
                 right = parseFactor();
-                if (isFactor(move(right)) && isFactor(move(temp))) {
+                if (isFactor(right->clone()) && isFactor(temp->clone())) {
                     temp = BuildArith(string("*"), move(temp), move(right));
                 } else { 
                     err_quit("Error type to do '*' at line %d", token.line());
@@ -192,7 +211,7 @@ ASTptr Parser::parseTerm() {
             case '/':{
                 nextToken();
                 right = parseFactor();
-                if (isFactor(move(right)) && isFactor(move(temp))) {
+                if (isFactor(right->clone()) && isFactor(temp->clone())) {
                     temp = BuildArith(string("/"), move(temp), move(right));
                 } else { 
                     err_quit("Error type to do '/' at line %d", token.line());
@@ -201,10 +220,13 @@ ASTptr Parser::parseTerm() {
             }
         }
     }
-    return move(temp);
+    return temp;
 }
 
 ASTptr Parser::parseFactor(){
+    
+    std::cout << "FType is " << token.type2Str() << " Value is " << token.val() << std::endl;
+    
     ASTptr temp;
         if (token.type() == Type::Number) {
             temp = BuildNum(token.val());
@@ -230,11 +252,11 @@ ASTptr Parser::parseFactor(){
             if (!match(')'))
                 err_quit("Expect for ')' at line %d", token.line());
             nextToken();
-        }
+        }      
         else 
             err_quit("Can't fetch factor at line %d and value is %s" ,
                 token.line(), token.val().c_str());
-    return move(temp);
+    return temp;
 }
 
 ASTptr Parser::parseFunc() {

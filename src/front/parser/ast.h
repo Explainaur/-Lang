@@ -9,11 +9,15 @@ class BaseAST {
         FactorType type_ = FactorType::Nil;
 
     public:
-        virtual ~BaseAST() {};
-        virtual Valptr Eval() { return Valptr(); };
-        virtual FactorType type() { return type_; };
-        virtual string svalue() { return string(""); };
-        virtual int ivalue() { return 0; };
+        BaseAST() {}
+        BaseAST(FactorType type) : type_(type) {}
+        virtual ~BaseAST() {}
+        virtual Valptr Eval() { return Valptr(); }
+        virtual FactorType type() { return type_; }
+        virtual string svalue() { return string(""); }
+        virtual int ivalue() { return 0; }
+        virtual void print() {}
+        virtual ASTptr clone();
 };
 
 
@@ -25,6 +29,7 @@ class FactorAST : public BaseAST {
         FactorAST(FactorType type) : type_(type) {}
         virtual Valptr Eval() override;
         virtual FactorType type() { return type_; }
+        virtual ASTptr clone();
 };
 
 class NumAST : public FactorAST {
@@ -35,6 +40,8 @@ class NumAST : public FactorAST {
         NumAST(int val, FactorType type)
             : value_(val), FactorAST(type) {}
         int ivalue() { return value_; }
+        ASTptr clone();
+        void print();
 };
 
 class StringAST : public FactorAST {
@@ -45,16 +52,20 @@ class StringAST : public FactorAST {
         StringAST(string val, FactorType type)
             : value_(val), FactorAST(type) {}
         string svalue() { return value_; }
+        ASTptr clone();
+        void print();
 };
 
-class IdAst : public FactorAST {
+class IdAST : public FactorAST {
     private:
         string id;
 
     public:
-        IdAst(string id_, FactorType type)
+        IdAST(string id_, FactorType type)
             : id(id_), FactorAST(type) {}
         string svalue() { return id; }
+        ASTptr clone();
+        void print();
 };
 
 /*
@@ -69,6 +80,8 @@ class AssignAST : public BaseAST {
         AssignAST(ASTptr id_, ASTptr val) 
             : id(std::move(id_)), value(std::move(val)) {}
         Valptr Eval() override;
+        ASTptr clone();
+        void print();
 };
 
 /*
@@ -81,9 +94,12 @@ class ArithAST : public BaseAST {
         ASTptr right;
 
     public:
-        ArithAST(string op_, ASTptr l, ASTptr r)
-            : op(op_), left(move(l)), right(move(r)) {}
+        ArithAST(string op_, ASTptr l, ASTptr r, FactorType type)
+            : op(op_), left(move(l)), right(move(r)), BaseAST(type) {}
         Valptr Eval() override;
+        string svalue() { return op; }
+        ASTptr clone();
+        void print();
 };
 
 /* 
@@ -100,6 +116,8 @@ class FuncDefAST : public BaseAST {
         FuncDefAST(string id_, Args args, Block stat)
             : id(id_), args_(std::move(args)), statement(std::move(stat)) {}
         Valptr Eval() override;
+        string svalue() { return id; }
+        ASTptr clone();
 };
 
 
@@ -115,6 +133,7 @@ class FuncAST : public BaseAST {
         FuncAST(string id_, Args args)
             : id(id_), args_(std::move(args_)) {}
         Valptr Eval() override;
+        ASTptr clone();
 };
 
 #endif
