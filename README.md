@@ -47,7 +47,7 @@ if foo = 1 {
     bar = bar + 1
 } else {
     bar = 0
-}
+}戴了不舒服，不戴又不安全
 bar
 ```
 **Function**  
