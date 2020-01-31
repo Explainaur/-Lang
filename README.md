@@ -21,7 +21,7 @@ factor ::= Number | id | String | (expr)
 ```
 
 ## 语法规则
-数据类型暂时只有int和string,语句之间要么换行要么分号和golang一样。数组之后再加。  
+数据类型暂时只有int和string,语句之间要换行和golang一样。数组之后再加。  
 **Assginment**  
 ```
 foo = 1
