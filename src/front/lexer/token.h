@@ -73,6 +73,8 @@ namespace Front {
         }
 
         void setToken(TokenType type, const std::string& value, int line);
+
+        void Log();
     };
 
 }

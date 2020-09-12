@@ -14,6 +14,7 @@ namespace Front {
     private:
         const static std::string operators[];
         const static std::string keywords[];
+
         char ch;
         Token currentToken;
         std::ifstream inStream;
@@ -52,15 +53,6 @@ namespace Front {
         static bool isKeyword(const std::string &value);
     };
 
-    const std::string Lexer::operators[] = {
-            "+", "-", "*", "/", "=", ">", "<",
-            ">=", "<=", "==", "!=", "!", "|", "&",
-            "(", ")"
-    };
-
-    const std::string Lexer::keywords[] = {
-            "def", "extern", "if", "else", "then"
-    };
 
 
 }

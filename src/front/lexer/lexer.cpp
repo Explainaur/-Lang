@@ -7,6 +7,16 @@
 #include <iostream>
 
 namespace Front {
+    const std::string Lexer::operators[] = {
+            "+", "-", "*", "/", "=", ">", "<",
+            ">=", "<=", "==", "!=", "!", "|", "&",
+            "(", ")"
+    };
+
+    const std::string Lexer::keywords[] = {
+            "def", "extern", "if", "else", "then"
+    };
+
     void Lexer::nextLine() {
         inStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
@@ -43,32 +53,41 @@ namespace Front {
 
                     token.setToken(TokenType::Operator, value, curLine);
                     nextChar(); // eat space
-                } else if (isdigit(ch)){
+                } else if (isdigit(ch)) {
                     while (!isSpace()) {
                         value += ch;
                         nextChar();
+
+                        if (isOper(std::string(1, ch))) {
+                            break;
+                        }
                     }
                     token.setToken(TokenType::Double, value, curLine);
-                    nextChar();
-                }
-            } else if (isalpha(ch)) {
-                while (!isSpace()) {
-                    value += ch;
-                    nextChar();
-                }
-                if (isKeyword(value)) {
-                    token.setToken(TokenType::Keyword, value, curLine);
-                } else {
-                    token.setToken(TokenType::Identifier, value, curLine);
+                } else if (isalpha(ch)) {
+                    while (!isSpace()) {
+                        value += ch;
+                        nextChar();
+
+                        if (isOper(std::string(1, ch))) {
+                            break;
+                        }
+                    }
+                    if (isKeyword(value)) {
+                        token.setToken(TokenType::Keyword, value, curLine);
+                    } else {
+                        token.setToken(TokenType::Identifier, value, curLine);
+                    }
                 }
             }
 
+        } else if (ch == -1) {
+            token.setToken(TokenType::Eof, "", curLine);
         }
-        std::cout << "Token: " << value << " LineNumber: " << curLine << std::endl;
-        return Token();
+        token.Log();
+        return token;
     }
 
-    bool Lexer::isOper(const std::string& value) {
+    bool Lexer::isOper(const std::string &value) {
         for (auto i : Lexer::operators) {
             if (i == value) {
                 return true;
