@@ -1,33 +1,68 @@
-#ifndef FRONT_LEXER_H
-#define FRONT_LEXER_H
+//
+// Created by dyf on 2020/9/11.
+//
 
-#include "token.h"
-#include <istream>
+#ifndef _LANG_LEXER_H
+#define _LANG_LEXER_H
 
-class Lexer {
+#include "Token.h"
+#include <string>
+#include <fstream>
+
+namespace Front {
+    class Lexer {
     private:
-        int cur_line;
-        std::istream &in;
-        char cur_pos;
-        Token cur_token;
-        void nextChar() {
-            in.get(cur_pos);
-            if (cur_pos == '\n' || cur_pos == '\r')
-                cur_line++;
-        };
-        bool isEOL() { return cur_pos == '\r' || cur_pos == '\n' || in.eof();}
+        const static std::string operators[];
+        const static std::string keywords[];
+        char ch;
+        Token currentToken;
+        std::ifstream inStream;
+        int lineNumber = 1;
+
+        bool isSpace() { return std::isspace(ch) || inStream.eof(); }
 
     public:
-        Lexer(std::istream &in_) : cur_line(1), in(in_), cur_pos(0) { nextChar(); } 
-        void set(int, string, Type);
-        Token nextToken();
-        Token handleComment();
-        Token handleStr();
-        Token handleNum();
-        Token handleId();
-        Token handleOP();
-        Token handleEOF();
-        Token handleEOL();
-};
+        bool openFile(const std::string &filename) {
+            inStream.open(filename);
+            return inStream.is_open();
+        }
 
-#endif
+        void nextChar() {
+            if (!inStream.eof()) {
+                ch = inStream.get();
+                if (ch == '\n' || ch == 'r') {
+                    lineNumber++;
+                }
+            }
+        }
+
+        void nextLine();
+
+        Token nextToken();
+
+        void eatSpace() {
+            while (isSpace()) {
+                nextChar(); // eat space
+                if (inStream.eof()) break;
+            }
+        }
+
+        static bool isOper(const std::string &value);
+
+        static bool isKeyword(const std::string &value);
+    };
+
+    const std::string Lexer::operators[] = {
+            "+", "-", "*", "/", "=", ">", "<",
+            ">=", "<=", "==", "!=", "!", "|", "&",
+            "(", ")"
+    };
+
+    const std::string Lexer::keywords[] = {
+            "def", "extern", "if", "else", "then"
+    };
+
+
+}
+
+#endif //_LANG_LEXER_H

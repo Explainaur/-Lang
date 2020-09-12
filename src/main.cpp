@@ -1,29 +1,13 @@
 #include <iostream>
 #include "front/lexer/lexer.h"
-#include "front/parser/parser.h"
-#include <fstream>
-using namespace std;
-int main() {
-    fstream fd;
-    fd.open("../test/a.x", ios::in);
-    Token token;
-    Lexer lexer = Lexer(fd);
-    Parser parser = Parser(lexer);
 
-    // for (int i=0; i<10;i++) {
-        // token = lexer.nextToken();
-        // cout << "Type is " << token.type2Str() << " Value is " << token.val() << endl;
-    // }
+using namespace Front;
 
-    parser.nextToken();    
-    for (int i=0;i<5;i++) {
-        ASTptr tree = parser.parseExpr();
-        if (tree.get()) {
-            cout << "--- main ---" << endl;
-            tree->print();
-            cout <<"--- ---- ---" << endl;
-        }
+int main(int argc, char* argv[]) {
+    auto *lexer = new Lexer();
+    lexer->openFile(argv[1]);
+    for (int i = 0; i < 20 ; i++) {
+        lexer->nextToken();
     }
-
     return 0;
 }

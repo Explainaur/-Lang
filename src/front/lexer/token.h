@@ -1,37 +1,80 @@
-#ifndef FRONT_LEXER_TOKEN_H
-#define FRONT_LEXER_TOKEN_H
+//
+// Created by dyf on 2020/9/11.
+//
+
+#ifndef _LANG_TOKEN_H
+#define _LANG_TOKEN_H
 
 #include <string>
 
-enum Type {String, Number, Identifier, OP, Keyword, End};
-using string = std::string;
+namespace Front {
 
-class Token {
+    enum class TokenType {
+        Keyword, Identifier, Double, Operator, EOL, Eof
+    };
+
+    class Token {
     private:
+        TokenType tokenType;
+        std::string keywordValue_;
+        std::string identValue_;
+        double numValue_;
+        std::string operValue_;
         int lineNumber;
-        string value;
-        Type type_;
-
     public:
-        Token(){};
-        void set(int line, string val, Type type) {
-            lineNumber = line;
-            value = val;
-            type_ = type;
-        }
-        Type type() { return type_; }
-        string val() { return value; }
-        int line() { return lineNumber; }
-        string type2Str() {
-            switch (type_) {
-                case Type::Identifier: return "Idernifier";
-                case Type::Keyword: return "Keyword";
-                case Type::Number: return "Number";
-                case Type::String: return "String";
-                case Type::OP: return "OP"; 
-            }
-            return "Nil";
-        }
-};
+        Token() = default;
 
-#endif
+        Token(TokenType type, int line) : tokenType(type), lineNumber(line) {}
+
+        TokenType getTokenType() {
+            return tokenType;
+        }
+
+        std::string getKeywordValue() {
+            return keywordValue_;
+        }
+
+        std::string getIdentValue() {
+            return identValue_;
+        }
+
+        std::string getOperValue() {
+            return operValue_;
+        }
+
+        double getNumValue() {
+            return numValue_;
+        }
+
+        int getLineNumber() {
+            return lineNumber;
+        }
+
+        void setTokenType(TokenType type) { this->tokenType = type; }
+
+        void setKeywordValue(std::string keyword) {
+            this->keywordValue_ = keyword;
+        }
+
+        void setIdentValue(std::string ident) {
+            this->identValue_ = ident;
+        }
+
+        void setNumValue(double num) {
+            this->numValue_ = num;
+        }
+
+        void setOperValue(std::string oper) {
+            this->operValue_ = oper;
+        }
+
+        void setLineNumber(int line) {
+            this->lineNumber = line;
+        }
+
+        void setToken(TokenType type, const std::string& value, int line);
+    };
+
+}
+
+#endif //_LANG_TOKEN_H
