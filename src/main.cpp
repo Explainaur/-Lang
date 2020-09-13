@@ -1,7 +1,7 @@
 #include <iostream>
 #include "front/lexer/lexer.h"
 
-using namespace Front;
+using namespace front;
 
 int main(int argc, char* argv[]) {
     auto *lexer = new Lexer();

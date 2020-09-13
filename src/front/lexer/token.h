@@ -6,8 +6,9 @@
 #define _LANG_TOKEN_H
 
 #include <string>
+#include <utility>
 
-namespace Front {
+namespace front {
 
     enum class TokenType {
         Keyword, Identifier, Double, Operator, EOL, Eof
@@ -15,6 +16,7 @@ namespace Front {
 
     class Token {
     private:
+        int pos;
         TokenType tokenType;
         std::string keywordValue_;
         std::string identValue_;
@@ -42,22 +44,26 @@ namespace Front {
             return operValue_;
         }
 
-        double getNumValue() {
+        double getNumValue() const {
             return numValue_;
         }
 
-        int getLineNumber() {
+        int getLineNumber() const {
             return lineNumber;
+        }
+
+        int getPosition() const {
+            return pos;
         }
 
         void setTokenType(TokenType type) { this->tokenType = type; }
 
         void setKeywordValue(std::string keyword) {
-            this->keywordValue_ = keyword;
+            this->keywordValue_ = std::move(keyword);
         }
 
         void setIdentValue(std::string ident) {
-            this->identValue_ = ident;
+            this->identValue_ = std::move(ident);
         }
 
         void setNumValue(double num) {
@@ -65,14 +71,18 @@ namespace Front {
         }
 
         void setOperValue(std::string oper) {
-            this->operValue_ = oper;
+            this->operValue_ = std::move(oper);
         }
 
         void setLineNumber(int line) {
             this->lineNumber = line;
         }
 
-        void setToken(TokenType type, const std::string& value, int line);
+        void setPosition(int position) {
+            this->pos = position;
+        }
+
+        void setToken(TokenType type, const std::string &value, int line, int pos);
 
         void Log();
     };

@@ -9,29 +9,33 @@
 #include <string>
 #include <fstream>
 
-namespace Front {
+namespace front {
     class Lexer {
     private:
         const static std::string operators[];
         const static std::string keywords[];
 
         char ch;
-        Token currentToken;
+        int pos = 0;
         std::ifstream inStream;
         int lineNumber = 1;
+        std::string filename;
 
         bool isSpace() { return std::isspace(ch) || inStream.eof(); }
 
     public:
-        bool openFile(const std::string &filename) {
-            inStream.open(filename);
+        bool openFile(const std::string &file) {
+            inStream.open(file);
+            filename = file;
             return inStream.is_open();
         }
 
         void nextChar() {
             if (!inStream.eof()) {
+                pos++;
                 ch = inStream.get();
                 if (ch == '\n' || ch == 'r') {
+                    pos = 0;
                     lineNumber++;
                 }
             }
@@ -51,8 +55,9 @@ namespace Front {
         static bool isOper(const std::string &value);
 
         static bool isKeyword(const std::string &value);
-    };
 
+        std::string GetFilename() { return filename; }
+    };
 
 
 }

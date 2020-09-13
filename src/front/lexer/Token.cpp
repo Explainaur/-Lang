@@ -6,9 +6,10 @@
 #include<iomanip>
 #include <iostream>
 
-namespace Front {
+namespace front {
 
-    void Token::setToken(TokenType type, const std::string &value, int line) {
+    void Token::setToken(TokenType type, const std::string &value, int line, int pos) {
+        this->setPosition(pos);
         this->setTokenType(type);
         this->setLineNumber(line);
         if (type == TokenType::Double) {

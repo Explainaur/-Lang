@@ -6,11 +6,11 @@
 #include "lexer.h"
 #include <iostream>
 
-namespace Front {
+namespace front {
     const std::string Lexer::operators[] = {
             "+", "-", "*", "/", "=", ">", "<",
             ">=", "<=", "==", "!=", "!", "|", "&",
-            "(", ")"
+            "(", ")", ","
     };
 
     const std::string Lexer::keywords[] = {
@@ -28,6 +28,7 @@ namespace Front {
 
         eatSpace();
 
+        int curPos = pos;
         int curLine = lineNumber;
         if (!isSpace()) {
             if (ch == '#') {
@@ -38,6 +39,7 @@ namespace Front {
 
             eatSpace();
 
+            curPos = pos;
             curLine = lineNumber;
             if (value.length() == 0) {
                 if (isOper(std::string(1, ch))) {
@@ -51,7 +53,7 @@ namespace Front {
                         }
                     }
 
-                    token.setToken(TokenType::Operator, value, curLine);
+                    token.setToken(TokenType::Operator, value, curLine, curPos);
                     nextChar(); // eat space
                 } else if (isdigit(ch)) {
                     while (!isSpace()) {
@@ -62,7 +64,7 @@ namespace Front {
                             break;
                         }
                     }
-                    token.setToken(TokenType::Double, value, curLine);
+                    token.setToken(TokenType::Double, value, curLine, curPos);
                 } else if (isalpha(ch)) {
                     while (!isSpace()) {
                         value += ch;
@@ -73,15 +75,15 @@ namespace Front {
                         }
                     }
                     if (isKeyword(value)) {
-                        token.setToken(TokenType::Keyword, value, curLine);
+                        token.setToken(TokenType::Keyword, value, curLine, curPos);
                     } else {
-                        token.setToken(TokenType::Identifier, value, curLine);
+                        token.setToken(TokenType::Identifier, value, curLine, curPos);
                     }
                 }
             }
 
         } else if (ch == -1) {
-            token.setToken(TokenType::Eof, "", curLine);
+            token.setToken(TokenType::Eof, "", curLine, curPos);
         }
         token.Log();
         return token;
