@@ -10,7 +10,7 @@ namespace front {
     const std::string Lexer::operators[] = {
             "+", "-", "*", "/", "=", ">", "<",
             ">=", "<=", "==", "!=", "!", "|", "&",
-            "(", ")", ","
+            "(", ")", ",", ";"
     };
 
     const std::string Lexer::keywords[] = {
@@ -18,6 +18,7 @@ namespace front {
     };
 
     void Lexer::nextLine() {
+        pos = 0;
         inStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
@@ -31,13 +32,13 @@ namespace front {
         int curPos = pos;
         int curLine = lineNumber;
         if (!isSpace()) {
-            if (ch == '#') {
+            while (ch == '#') {
                 nextLine();
                 lineNumber++;
                 nextChar();
+                eatSpace();
             }
 
-            eatSpace();
 
             curPos = pos;
             curLine = lineNumber;
@@ -85,7 +86,7 @@ namespace front {
         } else if (ch == -1) {
             token.setToken(TokenType::Eof, "", curLine, curPos);
         }
-        token.Log();
+//        token.Log();
         return token;
     }
 
