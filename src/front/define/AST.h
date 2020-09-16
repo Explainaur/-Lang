@@ -9,26 +9,29 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "llvm/DerivedTypes.h"
-#include "llvm/IRBuilder.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#include "llvm/Analysis/Verifier.h"
+
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 
 namespace front {
-    class BaseAST;
+    class ExprAST;
 
-    typedef std::shared_ptr<BaseAST> ASTPtr;
+    typedef std::shared_ptr<ExprAST> ASTPtr;
 
-    class BaseAST {
+    class ExprAST {
     public:
-        virtual Value *codegen() = 0;
+        virtual llvm::Value *codegen() = 0;
 
-    };
-
-    class ExprAST : public BaseAST {
-    public:
-        virtual Value *codegen() = 0;
+        virtual ~ExprAST() = default;
     };
 
     class NumberAST : public ExprAST {
@@ -37,10 +40,7 @@ namespace front {
     public:
         explicit NumberAST(double num) : value(num) {}
 
-        int getValue() { return value; }
-
-        virtual Value *codegen() = 0;
-
+        llvm::Value *codegen() override;
     };
 
     class VariableAST : public ExprAST {
@@ -49,7 +49,7 @@ namespace front {
     public:
         explicit VariableAST(std::string name) : value(std::move(name)) {}
 
-        virtual Value *codegen() = 0;
+        llvm::Value *codegen() override;
 
     };
 
@@ -61,8 +61,7 @@ namespace front {
         BinaryAST(std::string oper, ASTPtr lhs, ASTPtr rhs) :
                 op(std::move(oper)), LHS(std::move(lhs)), RHS(std::move(rhs)) {}
 
-        virtual Value *codegen() = 0;
-
+        llvm::Value *codegen() override;
     };
 
     class CallAST : public ExprAST {
@@ -73,10 +72,10 @@ namespace front {
         CallAST(std::string symbol_, std::vector<ASTPtr> args_) :
                 symbol(std::move(symbol_)), args(std::move(args_)) {}
 
-        virtual Value *codegen() = 0;
+        llvm::Value *codegen() override;
     };
 
-    class ProtoTypeAST : public BaseAST {
+    class ProtoTypeAST {
     private:
         std::string funcName;
         std::vector<std::string> args;
@@ -84,19 +83,25 @@ namespace front {
         ProtoTypeAST(std::string name, std::vector<std::string> args_) :
                 funcName(std::move(name)), args(std::move(args_)) {}
 
-        virtual Value *codegen() = 0;
+        std::string getName() { return funcName; }
+
+        llvm::Function *codegen();
     };
 
-    class FunctionAST : public BaseAST {
+    typedef std::shared_ptr<ProtoTypeAST> ProtoPtr;
+
+    class FunctionAST {
     private:
-        ASTPtr protoType;
+        ProtoPtr protoType;
         ASTPtr body;
     public:
-        FunctionAST(ASTPtr proto, ASTPtr body) :
+        FunctionAST(ProtoPtr proto, ASTPtr body) :
                 protoType(std::move(proto)), body(std::move(body)) {}
 
-        virtual Value *codegen() = 0;
+        llvm::Function *codegen();
     };
+
+    typedef std::shared_ptr<FunctionAST> FuncPtr;
 }
 
 #endif //_LANG_AST_H

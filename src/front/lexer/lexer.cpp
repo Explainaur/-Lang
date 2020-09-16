@@ -39,6 +39,9 @@ namespace front {
                 eatSpace();
             }
 
+            if (inStream.eof()) {
+                token.setToken(TokenType::Eof, "", curLine, curPos);
+            }
 
             curPos = pos;
             curLine = lineNumber;

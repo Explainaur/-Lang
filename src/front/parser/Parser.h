@@ -75,15 +75,22 @@ namespace front {
 
         ASTPtr ParseBinaryOPRHS(int prec, ASTPtr lhs);
 
-        ASTPtr ParseProtoType();
+        ProtoPtr ParseProtoType();
 
-        ASTPtr ParseDefine();
+        ProtoPtr ParseExtern();
 
-        ASTPtr ParseExtern();
+        FuncPtr ParseDefine();
 
-        ASTPtr ParseTopLevelExpr();
+        FuncPtr ParseTopLevelExpr();
 
         void Loop();
+
+        void HandleDefinition();
+
+        void HandleExtern();
+
+        void HandleTopLevelExpression();
+
     };
 
 }

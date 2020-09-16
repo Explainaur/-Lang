@@ -3,6 +3,7 @@
 //
 
 #include "Parser.h"
+#include "mid/IRGenerator.h"
 
 #include <map>
 
@@ -82,7 +83,7 @@ namespace front {
 
         // not '(' -> not function call
         if (!isLeftParentheses()) {
-            ASTPtr varAst = std::make_shared<VariableAST>(curToken.getIdentValue());
+            ASTPtr varAst = std::make_shared<VariableAST>(identName);
             return varAst;
         }
 
@@ -168,16 +169,18 @@ namespace front {
         }
     }
 
-    ASTPtr Parser::ParseProtoType() {
+    ProtoPtr Parser::ParseProtoType() {
         if (curToken.getTokenType() != TokenType::Identifier) {
-            return LogError("Expect function name in ProtoType.");
+            LogError("Expect function name in ProtoType.");
+            return nullptr;
         }
 
         std::string funcName = curToken.getIdentValue();
         nextToken();
 
         if (!isLeftParentheses()) {
-            return LogError("Expect '(' in ProtoType.");
+            LogError("Expect '(' in ProtoType.");
+            return nullptr;
         }
         nextToken();    //eat '('
 
@@ -187,19 +190,21 @@ namespace front {
             nextToken();
             if (isRightParentheses()) break;
             if (!isComma()) {
-                return LogError("Expect ',' in ProtoType.");
+                LogError("Expect ',' in ProtoType.");
+                return nullptr;
             }
             nextToken();    // eat ','
         }
         if (!isRightParentheses()) {
-            return LogError("Expect ')' in ProtoType.");
+            LogError("Expect ')' in ProtoType.");
+            return nullptr;
         }
         nextToken();    // eat ')'
 
         return std::make_shared<ProtoTypeAST>(funcName, args);
     }
 
-    ASTPtr Parser::ParseDefine() {
+    FuncPtr Parser::ParseDefine() {
         nextToken();    // eat def
         auto protoType = ParseProtoType();
         if (!protoType) return nullptr;
@@ -210,18 +215,55 @@ namespace front {
         return nullptr;
     }
 
-    ASTPtr Parser::ParseExtern() {
+    ProtoPtr Parser::ParseExtern() {
         nextToken();    // eat extern
         return ParseProtoType();
     }
 
-    ASTPtr Parser::ParseTopLevelExpr() {
+    FuncPtr Parser::ParseTopLevelExpr() {
         if (auto expr = ParseExpression()) {
             // make anonymous proto
             auto proto = std::make_shared<ProtoTypeAST>("", std::vector<std::string>());
             return std::make_shared<FunctionAST>(proto, expr);
         }
         return nullptr;
+    }
+
+    void Parser::HandleDefinition() {
+        if (auto FnAST = ParseDefine()) {
+            if (auto *FnIR = FnAST->codegen()) {
+//                FnIR->print(llvm::errs());
+                return;
+            }
+        } else {
+            // Skip token for error recovery.
+            nextToken();
+        }
+    }
+
+    void Parser::HandleExtern() {
+        if (auto ProtoAST = ParseExtern()) {
+            if (auto *FnIR = ProtoAST->codegen()) {
+//                FnIR->print(llvm::errs());
+                return;
+            }
+        } else {
+            // Skip token for error recovery.
+            nextToken();
+        }
+    }
+
+    void Parser::HandleTopLevelExpression() {
+        // Evaluate a top-level expression into an anonymous function.
+        if (auto FnAST = ParseTopLevelExpr()) {
+            if (auto *FnIR = FnAST->codegen()) {
+//                FnIR->print(llvm::errs());
+                return;
+            }
+        } else {
+            // Skip token for error recovery.
+            nextToken();
+        }
     }
 
     void Parser::Loop() {
@@ -233,13 +275,13 @@ namespace front {
                        curToken.getOperValue() == ";") {
                 nextToken();
             } else if (isDefine()) {
-                ParseDefine();
+                HandleDefinition();
                 LOGINFO("Parsed a function definition.");
             } else if (isExtern()) {
-                ParseExtern();
+                HandleExtern();
                 LOGINFO("Parsed an extern function.");
             } else {
-                ParseTopLevelExpr();
+                HandleTopLevelExpression();
                 LOGINFO("Parsed a top level expression.");
             }
         }

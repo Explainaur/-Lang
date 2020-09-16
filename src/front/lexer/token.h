@@ -82,7 +82,7 @@ namespace front {
             this->pos = position;
         }
 
-        void setToken(TokenType type, const std::string &value, int line, int pos);
+        void setToken(TokenType type, const std::string &value, int line, int position);
 
         void Log();
     };

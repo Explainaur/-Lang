@@ -8,8 +8,8 @@
 
 namespace front {
 
-    void Token::setToken(TokenType type, const std::string &value, int line, int pos) {
-        this->setPosition(pos);
+    void Token::setToken(TokenType type, const std::string &value, int line, int position) {
+        this->setPosition(position);
         this->setTokenType(type);
         this->setLineNumber(line);
         if (type == TokenType::Double) {
