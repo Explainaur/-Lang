@@ -15,6 +15,9 @@ static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
 static std::unique_ptr<llvm::Module> TheModule;
 static std::map<std::string, llvm::Value *> NamedValues;
+static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+static std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
+
 
 void ModuleInit() {
     TheModule = std::make_unique<llvm::Module>("dyf", TheContext);
@@ -149,10 +152,45 @@ llvm::Function *FunctionAST::codegen() {
         // Validate the generated code, checking for consistency.
         verifyFunction(*TheFunction);
 
+        // Optimize the function.
+        TheFPM->run(*TheFunction);
+
         return TheFunction;
     }
 
     // Error reading body, remove function.
     TheFunction->eraseFromParent();
     return nullptr;
+}
+
+void InitializeModuleAndPassManager(void) {
+    // Open a new module.
+    TheModule = std::make_unique<llvm::Module>("zxy", TheContext);
+    // Setup the data layout for the JIT
+    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+
+    // Create a new pass manager attached to it.
+    TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    TheFPM->add(llvm::createInstructionCombiningPass());
+    // Reassociate expressions.
+    TheFPM->add(llvm::createReassociatePass());
+    // Eliminate Common SubExpressions.
+    TheFPM->add(llvm::createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    TheFPM->add(llvm::createCFGSimplificationPass());
+
+    TheFPM->doInitialization();
+}
+
+void MidInit() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
+    ModuleInit();
+    TheJIT = std::make_unique<llvm::orc::KaleidoscopeJIT>();
+    InitializeModuleAndPassManager();
+
 }

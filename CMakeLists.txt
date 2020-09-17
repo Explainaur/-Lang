@@ -18,5 +18,5 @@ message(STATUS "Include Directory ${LLVM_INCLUDE_DIRS}")
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(_Lang ${SOURCES})
-llvm_map_components_to_libnames(LLVM_LIBS core support)
+llvm_map_components_to_libnames(LLVM_LIBS core support executionengine passes interpreter orcjit x86asmparser x86disassembler x86codegen target)
 target_link_libraries(_Lang ${LLVM_LIBS})

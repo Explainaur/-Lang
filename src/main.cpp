@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     lexer->openFile(argv[1]);
 //    for (auto token = lexer->nextToken(); token.getTokenType() != TokenType::Eof; token = lexer->nextToken());
     auto *parser = new Parser(lexer);
-    ModuleInit();
+    MidInit();
     parser->Loop();
     DumpCode();
 
