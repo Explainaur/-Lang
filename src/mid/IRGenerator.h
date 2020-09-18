@@ -23,5 +23,13 @@ void InitializeModuleAndPassManager(void);
 
 void MidInit();
 
+extern llvm::LLVMContext TheContext;
+extern llvm::IRBuilder<> Builder;
+extern std::unique_ptr<llvm::Module> TheModule;
+extern std::map<std::string, llvm::Value *> NamedValues;
+extern std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+extern std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
+extern std::map<std::string, std::shared_ptr<front::ProtoTypeAST>> FunctionProtos;
+
 
 #endif //_LANG_IRGENERATOR_H

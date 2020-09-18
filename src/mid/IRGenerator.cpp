@@ -8,19 +8,27 @@
 
 #include "IRGenerator.h"
 #include "front/define/color.h"
+#include "mid/JITSupport.h"
 
 using namespace front;
 
-static llvm::LLVMContext TheContext;
-static llvm::IRBuilder<> Builder(TheContext);
-static std::unique_ptr<llvm::Module> TheModule;
-static std::map<std::string, llvm::Value *> NamedValues;
-static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
-static std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
+llvm::LLVMContext TheContext;
+llvm::IRBuilder<> Builder(TheContext);
+std::unique_ptr<llvm::Module> TheModule;
+std::map<std::string, llvm::Value *> NamedValues;
+std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
+std::map<std::string, std::shared_ptr<ProtoTypeAST>> FunctionProtos;
 
 
 void ModuleInit() {
     TheModule = std::make_unique<llvm::Module>("dyf", TheContext);
+}
+
+void JITInit() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
 }
 
 void DumpCode() {
@@ -86,12 +94,13 @@ llvm::Value *BinaryAST::codegen() {
 
 llvm::Value *CallAST::codegen() {
     // Look up the name in the global module table.
-    llvm::Function *CalleeF = TheModule->getFunction(symbol);
-    if (!CalleeF)
+    llvm::Function *calleeF = getFunction(symbol);
+
+    if (!calleeF)
         return LogErrorV("Unknown function referenced");
 
     // If argument mismatch error.
-    if (CalleeF->arg_size() != args.size())
+    if (calleeF->arg_size() != args.size())
         return LogErrorV("Incorrect # arguments passed");
 
     std::vector<llvm::Value *> ArgsV;
@@ -101,7 +110,7 @@ llvm::Value *CallAST::codegen() {
             return nullptr;
     }
 
-    return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+    return Builder.CreateCall(calleeF, ArgsV, "calltmp");
 }
 
 llvm::Function *ProtoTypeAST::codegen() {
@@ -127,12 +136,11 @@ llvm::Function *ProtoTypeAST::codegen() {
 }
 
 llvm::Function *FunctionAST::codegen() {
-    // First, check for an existing function from a previous 'extern' declaration.
-    llvm::Function *TheFunction = TheModule->getFunction(protoType->getName());
-
-    if (!TheFunction)
-        TheFunction = protoType->codegen();
-
+    // Transfer ownership of the prototype to the FunctionProtos map, but keep a
+    // reference to it for use below.
+    auto &P = *protoType;
+    FunctionProtos[protoType->getName()] = protoType;
+    llvm::Function *TheFunction = getFunction(P.getName());
     if (!TheFunction)
         return nullptr;
 
@@ -182,15 +190,15 @@ void InitializeModuleAndPassManager(void) {
     TheFPM->add(llvm::createCFGSimplificationPass());
 
     TheFPM->doInitialization();
+
 }
 
 void MidInit() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-
     ModuleInit();
+    JITInit();
     TheJIT = std::make_unique<llvm::orc::KaleidoscopeJIT>();
+    assert(TheJIT != nullptr);
+
     InitializeModuleAndPassManager();
 
 }

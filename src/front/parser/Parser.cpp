@@ -223,7 +223,7 @@ namespace front {
     FuncPtr Parser::ParseTopLevelExpr() {
         if (auto expr = ParseExpression()) {
             // make anonymous proto
-            auto proto = std::make_shared<ProtoTypeAST>("", std::vector<std::string>());
+            auto proto = std::make_shared<ProtoTypeAST>("__anon_expr", std::vector<std::string>());
             return std::make_shared<FunctionAST>(proto, expr);
         }
         return nullptr;
@@ -232,7 +232,9 @@ namespace front {
     void Parser::HandleDefinition() {
         if (auto FnAST = ParseDefine()) {
             if (auto *FnIR = FnAST->codegen()) {
-//                FnIR->print(llvm::errs());
+                FnIR->print(llvm::errs());
+                TheJIT->addModule(std::move(TheModule));
+                InitializeModuleAndPassManager();
                 return;
             }
         } else {
@@ -245,6 +247,7 @@ namespace front {
         if (auto ProtoAST = ParseExtern()) {
             if (auto *FnIR = ProtoAST->codegen()) {
 //                FnIR->print(llvm::errs());
+                FunctionProtos[ProtoAST->getName()] = std::move(ProtoAST);
                 return;
             }
         } else {
@@ -258,6 +261,26 @@ namespace front {
         if (auto FnAST = ParseTopLevelExpr()) {
             if (auto *FnIR = FnAST->codegen()) {
 //                FnIR->print(llvm::errs());
+
+                // JIT the module containing the anonymous expression, keeping a handle so
+                // we can free it later.
+                assert(TheJIT != nullptr);
+                auto H = TheJIT->addModule(std::move(TheModule));
+                InitializeModuleAndPassManager();
+
+                // Search the JIT for the __anon_expr symbol.
+                auto ExprSymbol = TheJIT->findSymbol("__anon_expr");
+                assert(ExprSymbol && "Function not found");
+
+                // Get the symbol's address and cast it to the right type (takes no
+                // arguments, returns a double) so we can call it as a native function.
+                double (*FP)() = (double (*)()) (intptr_t) cantFail(ExprSymbol.getAddress());
+                fprintf(stderr, "Evaluated to %f\n", FP());
+
+
+                // Delete the anonymous expression module from the JIT.
+                TheJIT->removeModule(H);
+
                 return;
             }
         } else {
