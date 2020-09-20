@@ -62,6 +62,58 @@ llvm::Value *VariableAST::codegen() {
     return V;
 }
 
+llvm::Value *IfExprAST::codegen() {
+    llvm::Value *condV = condition->codegen();
+    if (!condV) return nullptr;
+
+    // Convert condition to a bool by comparing non-equal to 0.0.
+    condV = Builder.CreateFCmpONE(
+            condV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "ifcond");
+
+    llvm::Function *theFunction = Builder.GetInsertBlock()->getParent();
+
+    // Create blocks for the then and else cases.  Insert the 'then' block at the
+    // end of the function.
+    llvm::BasicBlock *thenBB = llvm::BasicBlock::Create(TheContext, "then", theFunction);
+    llvm::BasicBlock *elseBB = llvm::BasicBlock::Create(TheContext, "else");
+    llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(TheContext, "ifcont");
+
+    Builder.CreateCondBr(condV, thenBB, elseBB);
+
+    // Emit then value.
+    Builder.SetInsertPoint(thenBB);
+
+    llvm::Value *thenV = then_->codegen();
+    if (!thenV) return nullptr;
+
+    Builder.CreateBr(mergeBB);
+
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+    thenBB = Builder.GetInsertBlock();
+
+    // Emit else block.
+    theFunction->getBasicBlockList().push_back(elseBB);
+    Builder.SetInsertPoint(elseBB);
+
+    llvm::Value *elseV = else_->codegen();
+    if (!elseV)
+        return nullptr;
+
+    Builder.CreateBr(mergeBB);
+
+    // codegen of 'Else' can change the current block, update ElseBB for the PHI.
+    elseBB = Builder.GetInsertBlock();
+
+    // Emit merge block.
+    theFunction->getBasicBlockList().push_back(mergeBB);
+    Builder.SetInsertPoint(mergeBB);
+    llvm::PHINode *phiNode = Builder.CreatePHI(llvm::Type::getDoubleTy(TheContext), 2, "iftmp");
+
+    phiNode->addIncoming(thenV, thenBB);
+    phiNode->addIncoming(elseV, elseBB);
+    return phiNode;
+}
+
 llvm::Value *BinaryAST::codegen() {
     llvm::Value *L = LHS->codegen();
     llvm::Value *R = RHS->codegen();

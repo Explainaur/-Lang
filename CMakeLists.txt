@@ -3,7 +3,7 @@ project(_Lang)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Werror -fdeclspec)
 
 
 find_package(LLVM REQUIRED CONFIG)

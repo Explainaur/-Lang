@@ -23,7 +23,6 @@
 #include "llvm/IR/Verifier.h"
 
 
-
 namespace front {
     class ExprAST;
 
@@ -64,6 +63,15 @@ namespace front {
                 op(std::move(oper)), LHS(std::move(lhs)), RHS(std::move(rhs)) {}
 
         llvm::Value *codegen() override;
+    };
+
+    class IfExprAST : public ExprAST {
+        ASTPtr condition, then_, else_;
+    public:
+        IfExprAST(ASTPtr cond, ASTPtr then, ASTPtr _else) :
+                condition(std::move(cond)), then_(std::move(then)), else_(std::move(_else)) {}
+
+        llvm::Value * codegen() override;
     };
 
     class CallAST : public ExprAST {

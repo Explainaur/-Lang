@@ -33,6 +33,12 @@ namespace front {
 
         bool isExtern();
 
+        bool isIf();
+
+        bool isThen();
+
+        bool isElse();
+
         void setPrecedence();
 
         int getPrecedence();
@@ -72,6 +78,8 @@ namespace front {
         ASTPtr ParseParenExpr();
 
         ASTPtr ParsePrimary();
+
+        ASTPtr ParseIfExpr();
 
         ASTPtr ParseBinaryOPRHS(int prec, ASTPtr lhs);
 

@@ -66,6 +66,30 @@ namespace front {
         return false;
     }
 
+    bool Parser::isIf() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "if") {
+            return true;
+        }
+        return false;
+    }
+
+    bool Parser::isThen() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "then") {
+            return true;
+        }
+        return false;
+    }
+
+    bool Parser::isElse() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "else") {
+            return true;
+        }
+        return false;
+    }
+
     // Parse the number
     ASTPtr Parser::ParseNumber() {
         assert(curToken.getTokenType() == TokenType::Double);
@@ -135,9 +159,37 @@ namespace front {
             return ParseNumber();
         } else if (isLeftParentheses()) {
             return ParseParenExpr();
-        } else {
+        } else if (isIf()) {
+            return ParseIfExpr();
+        }
+        else {
             return LogError("Unknow type when parsing expression.");
         }
+    }
+
+    ASTPtr Parser::ParseIfExpr() {
+        nextToken();    // eat 'if'
+
+        auto cond = ParseExpression();
+        if (!cond) return nullptr;
+
+        if (!isThen()) {
+            return LogError("Expect 'then' here.");
+        }
+        nextToken();    // eat 'then'
+
+        auto then = ParseExpression();
+        if (!then) return nullptr;
+
+        if (!isElse()) {
+            return LogError("Expect 'else' here.");
+        }
+        nextToken();    // eat 'else'
+
+        auto else_ = ParseExpression();
+        if (!else_) return nullptr;
+
+        return std::make_shared<IfExprAST>(std::move(cond), std::move(then), std::move(else_));
     }
 
     ASTPtr Parser::ParseExpression() {
