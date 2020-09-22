@@ -114,6 +114,93 @@ llvm::Value *IfExprAST::codegen() {
     return phiNode;
 }
 
+llvm::Value *ForExprAST::codegen() {
+    llvm::Value *startValue = start_->codegen();
+    if (!startValue) return nullptr;
+
+    // Make the new basic block for the loop header, inserting after current
+    // block.
+    llvm::Function *theFunction = Builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock *preHeaderBB = Builder.GetInsertBlock();
+    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(
+            TheContext, "loop", theFunction);
+
+    // Insert an explicit fall through from the current block to the LoopBB.
+    Builder.CreateBr(loopBB);
+
+    // Start insertion in LoopBB.
+    Builder.SetInsertPoint(loopBB);
+
+    // Start the PHI node with an entry for Start.
+    llvm::PHINode *phiNode = Builder.CreatePHI(
+            llvm::Type::getDoubleTy(TheContext), 2, valueName);
+    phiNode->addIncoming(startValue, preHeaderBB);
+
+    // Within the loop, the variable is defined equal to the PHI node.  If it
+    // shadows an existing variable, we have to restore it, so save it now.
+    llvm::Value *oldVal = NamedValues[valueName];
+    NamedValues[valueName] = phiNode;
+
+    // Emit the body of the loop.  This, like any other expr, can change the
+    // current BB.  Note that we ignore the value computed by the body, but don't
+    // allow an error.
+    //    loopBB = Builder.GetInsertBlock();
+    //    Builder.SetInsertPoint(loopBB);
+    llvm::Value *bodyValue = body->codegen();
+    if (!bodyValue) return nullptr;
+
+    // Emit the step value.
+    llvm::Value *stepValue = nullptr;
+    if (step) {
+        stepValue = step->codegen();
+        if (!stepValue)
+            return nullptr;
+    } else {
+        // If not specified, use 1.0.
+        stepValue = llvm::ConstantFP::get(TheContext, llvm::APFloat(1.0));
+    }
+
+    llvm::Value *nextValue = Builder.CreateFAdd(phiNode, stepValue, "nextValue");
+
+    llvm::Value *endCond = end_->codegen();
+    if (!endCond) return nullptr;
+
+    endCond = Builder.CreateFCmpONE(
+            endCond, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
+
+    // Create the "after loop" block and insert it.
+    llvm::BasicBlock *loopEndBB = Builder.GetInsertBlock();
+    llvm::BasicBlock *afterBB =
+            llvm::BasicBlock::Create(TheContext, "afterloop", theFunction);
+
+    // Insert the conditional branch into the end of LoopEndBB.
+    Builder.CreateCondBr(endCond, loopBB, afterBB);
+
+    // Any new code will be inserted in AfterBB.
+    Builder.SetInsertPoint(afterBB);
+
+    // Add a new entry to the PHI node for the backedge.
+    phiNode->addIncoming(nextValue, loopEndBB);
+
+    // Restore the unshadowed variable
+    if (oldVal) {
+        NamedValues[valueName] = oldVal;
+    } else {
+        NamedValues.erase(valueName);
+    }
+
+    return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(TheContext));
+}
+
+llvm::Value *UnaryAST::codegen() {
+    llvm::Value* operandV = operand->codegen();
+    if (!operandV) return nullptr;
+
+    llvm::Function *op = getFunction(std::string("unary") + this->oper);
+    auto unarySSA = Builder.CreateCall(op, operandV, "unop");
+    return unarySSA;
+}
+
 llvm::Value *BinaryAST::codegen() {
     llvm::Value *L = LHS->codegen();
     llvm::Value *R = RHS->codegen();

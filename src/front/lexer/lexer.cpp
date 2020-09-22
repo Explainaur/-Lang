@@ -14,7 +14,7 @@ namespace front {
     };
 
     const std::string Lexer::keywords[] = {
-            "def", "extern", "if", "else", "then"
+            "def", "extern", "if", "else", "then", "for", "in", "binary", "unary"
     };
 
     void Lexer::nextLine() {
@@ -25,6 +25,7 @@ namespace front {
     Token Lexer::nextToken() {
         std::string value;
         Token token;
+        int flag = 1;
         if (ch == 0) nextChar();
 
         eatSpace();
@@ -54,11 +55,16 @@ namespace front {
                         nextChar();
                         if (ch == '=') {
                             value += ch;
+                        } else {
+                            flag = 0;
                         }
                     }
 
                     token.setToken(TokenType::Operator, value, curLine, curPos);
-                    nextChar(); // eat space
+                    if (flag) {
+                        nextChar(); // eat space
+                    }
+
                 } else if (isdigit(ch)) {
                     while (!isSpace()) {
                         value += ch;

@@ -29,6 +29,8 @@ namespace front {
 
         bool isComma();
 
+        bool isEqualSign();
+
         bool isDefine();
 
         bool isExtern();
@@ -38,6 +40,12 @@ namespace front {
         bool isThen();
 
         bool isElse();
+
+        bool isFor();
+
+        bool isIn();
+
+        bool isUnary();
 
         void setPrecedence();
 
@@ -80,6 +88,10 @@ namespace front {
         ASTPtr ParsePrimary();
 
         ASTPtr ParseIfExpr();
+
+        ASTPtr ParseForExpr();
+
+        ASTPtr ParseUnary();
 
         ASTPtr ParseBinaryOPRHS(int prec, ASTPtr lhs);
 

@@ -9,6 +9,9 @@
 
 namespace front {
 
+    static const std::string UnaryOperator[] = {
+            "!", "-", "@", "$", "%", "^"
+    };
 
     void Parser::setPrecedence() {
         BinopPrecedence["<"] = 10;
@@ -45,6 +48,14 @@ namespace front {
     bool Parser::isComma() {
         if (curToken.getTokenType() == TokenType::Operator &&
             curToken.getOperValue() == ",") {
+            return true;
+        }
+        return false;
+    }
+
+    bool Parser::isEqualSign() {
+        if (curToken.getTokenType() == TokenType::Operator &&
+            curToken.getOperValue() == "=") {
             return true;
         }
         return false;
@@ -88,6 +99,41 @@ namespace front {
             return true;
         }
         return false;
+    }
+
+    bool Parser::isFor() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "for") {
+            return true;
+        }
+        return false;
+    }
+
+    bool Parser::isUnary() {
+        if (curToken.getTokenType() == TokenType::Operator) {
+            std::string op = curToken.getOperValue();
+            for (auto i : UnaryOperator) {
+                if (i == op) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool Parser::isIn() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "in") {
+            return true;
+        }
+        return false;
+    }
+
+    void PrintEvaluate(double result) {
+        auto green = Color::Modifier(Color::Code::FG_GREEN);
+        auto red = Color::Modifier(Color::Code::FG_RED);
+        auto def = Color::Modifier(Color::Code::FG_DEFAULT);
+        std::cerr << red << "Evaluated to " << green << result << def << std::endl;
     }
 
     // Parse the number
@@ -161,8 +207,9 @@ namespace front {
             return ParseParenExpr();
         } else if (isIf()) {
             return ParseIfExpr();
-        }
-        else {
+        } else if (isFor()) {
+            return ParseForExpr();
+        } else {
             return LogError("Unknow type when parsing expression.");
         }
     }
@@ -192,8 +239,66 @@ namespace front {
         return std::make_shared<IfExprAST>(std::move(cond), std::move(then), std::move(else_));
     }
 
+    ASTPtr Parser::ParseForExpr() {
+        nextToken();    // eat for
+
+        if (curToken.getTokenType() != TokenType::Identifier) {
+            return LogError("Expect identifier after for.");
+        }
+
+        std::string valueName = curToken.getIdentValue();
+        nextToken();    // eat identfier
+
+        if (!isEqualSign()) {
+            return LogError("Expect '=' here.");
+        }
+        nextToken();    // eat '='
+
+        auto start = ParseExpression();
+        if (!start) return nullptr;
+
+        if (!isComma()) {
+            return LogError("Expect ',' here.");
+        }
+        nextToken();    // eat ','
+
+        auto end = ParseExpression();
+        if (!end) return nullptr;
+
+        ASTPtr step;
+        if (isComma()) {
+            nextToken();    // eat ','
+            step = ParseExpression();
+            if (!step) return nullptr;
+        }
+
+        if (!isIn()) {
+            return LogError("Expect 'in' after for");
+        }
+        nextToken();    // eat 'in'
+
+        auto body = ParseExpression();
+        if (!body) return nullptr;
+
+        return std::make_shared<ForExprAST>(valueName, std::move(start), std::move(end), std::move(step),
+                                            std::move(body));
+    }
+
+    ASTPtr Parser::ParseUnary() {
+        if (isUnary()) {
+            std::string op = curToken.getOperValue();
+            nextToken();    // eat unary operator
+            if (auto operand = ParseUnary()) {
+                return std::make_shared<UnaryAST>(op, operand);
+            }
+        } else {
+            return ParsePrimary();
+        }
+        return LogError("Parse Unary Failed.");
+    }
+
     ASTPtr Parser::ParseExpression() {
-        auto LHS = ParsePrimary();
+        auto LHS = ParseUnary();
         if (LHS == nullptr) return nullptr;
         return ParseBinaryOPRHS(0, LHS);
     }
@@ -207,7 +312,7 @@ namespace front {
             auto binaryOp = curToken;
             nextToken();
 
-            auto rhs = ParsePrimary();
+            auto rhs = ParseUnary();
             if (!rhs) return nullptr;
 
             int nextPrec = getPrecedence();
@@ -222,14 +327,26 @@ namespace front {
     }
 
     ProtoPtr Parser::ParseProtoType() {
+        std::string funcName;
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "unary") {
+            nextToken();    // eat "unary"
+            if (isUnary()) {
+                funcName = std::string("unary") + curToken.getOperValue();
+                nextToken();    // eat "unary operator"
+                goto start;
+            }
+        }
+
         if (curToken.getTokenType() != TokenType::Identifier) {
             LogError("Expect function name in ProtoType.");
             return nullptr;
         }
 
-        std::string funcName = curToken.getIdentValue();
+        funcName = curToken.getIdentValue();
         nextToken();
 
+        start:
         if (!isLeftParentheses()) {
             LogError("Expect '(' in ProtoType.");
             return nullptr;
@@ -327,8 +444,7 @@ namespace front {
                 // Get the symbol's address and cast it to the right type (takes no
                 // arguments, returns a double) so we can call it as a native function.
                 double (*FP)() = (double (*)()) (intptr_t) cantFail(ExprSymbol.getAddress());
-                fprintf(stderr, "Evaluated to %f\n", FP());
-
+                PrintEvaluate(FP());
 
                 // Delete the anonymous expression module from the JIT.
                 TheJIT->removeModule(H);

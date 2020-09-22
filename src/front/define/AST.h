@@ -54,6 +54,16 @@ namespace front {
 
     };
 
+    class UnaryAST : public ExprAST {
+    private:
+        std::string oper;
+        ASTPtr operand;
+    public:
+        UnaryAST(std::string operator_, ASTPtr operand_) : oper(std::move(operator_)), operand(std::move(operand_)) {}
+
+        llvm::Value *codegen() override;
+    };
+
     class BinaryAST : public ExprAST {
     private:
         std::string op;
@@ -71,7 +81,18 @@ namespace front {
         IfExprAST(ASTPtr cond, ASTPtr then, ASTPtr _else) :
                 condition(std::move(cond)), then_(std::move(then)), else_(std::move(_else)) {}
 
-        llvm::Value * codegen() override;
+        llvm::Value *codegen() override;
+    };
+
+    class ForExprAST : public ExprAST {
+        std::string valueName;
+        ASTPtr start_, end_, step, body;
+    public:
+        ForExprAST(const std::string name, ASTPtr start, ASTPtr end, ASTPtr step, ASTPtr body) :
+                valueName(name), start_(std::move(start)), end_(std::move(end)), step(std::move(step)),
+                body(std::move(body)) {}
+
+        llvm::Value *codegen() override;
     };
 
     class CallAST : public ExprAST {
@@ -90,6 +111,7 @@ namespace front {
         std::string funcName;
         std::vector<std::string> args;
     public:
+
         ProtoTypeAST(std::string name, std::vector<std::string> args_) :
                 funcName(std::move(name)), args(std::move(args_)) {}
 
