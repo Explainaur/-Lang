@@ -15,7 +15,7 @@ using namespace front;
 llvm::LLVMContext TheContext;
 llvm::IRBuilder<> Builder(TheContext);
 std::unique_ptr<llvm::Module> TheModule;
-std::map<std::string, llvm::Value *> NamedValues;
+std::map<std::string, llvm::AllocaInst *> NamedValues;
 std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 std::map<std::string, std::shared_ptr<ProtoTypeAST>> FunctionProtos;
@@ -47,6 +47,10 @@ llvm::Value *LogErrorV(const std::string &info) {
     return nullptr;
 }
 
+llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *theFunction, const std::string &varName) {
+    llvm::IRBuilder<> tmpB(&theFunction->getEntryBlock(), theFunction->getEntryBlock().begin());
+    return tmpB.CreateAlloca(llvm::Type::getDoubleTy(TheContext), nullptr, varName);
+}
 
 llvm::Value *NumberAST::codegen() {
     return llvm::ConstantFP::get(TheContext, llvm::APFloat(value));
@@ -57,9 +61,43 @@ llvm::Value *VariableAST::codegen() {
     // Look this variable up in the function.
     llvm::Value *V = NamedValues[value];
     if (!V) {
-        LogErrorV("Unknown variable name");
+        return LogErrorV("Unknown variable name");
     }
-    return V;
+    return Builder.CreateLoad(V, value);
+}
+
+llvm::Value *VariableDefineAST::codegen() {
+    llvm::Function *theFunction = Builder.GetInsertBlock()->getParent();
+
+    std::vector<llvm::AllocaInst *> oldBindings;
+
+    for (unsigned i = 0, e = variables.size(); i != e; i++) {
+        const std::string &varName = variables[i].first;
+        ASTPtr init = variables[i].second;
+
+        llvm::Value *initVal;
+        if (init) {
+            initVal = init->codegen();
+            if (!initVal) return nullptr;
+        } else {
+            initVal = llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0));
+        }
+
+        llvm::AllocaInst *alloca = CreateEntryBlockAlloca(theFunction, varName);
+        Builder.CreateStore(initVal, alloca);
+
+        oldBindings.push_back(NamedValues[varName]);
+
+        NamedValues[varName] = alloca;
+    }
+    llvm::Value *bodyValue = body->codegen();
+    if (!bodyValue) return nullptr;
+
+    // Pop all our variables from scope.
+    for (unsigned i = 0, e = variables.size(); i != e; ++i)
+        NamedValues[variables[i].first] = oldBindings[i];
+
+    return bodyValue;
 }
 
 llvm::Value *IfExprAST::codegen() {
@@ -115,15 +153,20 @@ llvm::Value *IfExprAST::codegen() {
 }
 
 llvm::Value *ForExprAST::codegen() {
+    llvm::Function *theFunction = Builder.GetInsertBlock()->getParent();
+
+    // Create an alloca for the variable in the entry block
+    llvm::AllocaInst *alloca = CreateEntryBlockAlloca(theFunction, valueName);
+
     llvm::Value *startValue = start_->codegen();
     if (!startValue) return nullptr;
 
+    // Store the value into the alloca.
+    Builder.CreateStore(startValue, alloca);
+
     // Make the new basic block for the loop header, inserting after current
     // block.
-    llvm::Function *theFunction = Builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock *preHeaderBB = Builder.GetInsertBlock();
-    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(
-            TheContext, "loop", theFunction);
+    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(TheContext, "loop", theFunction);
 
     // Insert an explicit fall through from the current block to the LoopBB.
     Builder.CreateBr(loopBB);
@@ -131,21 +174,14 @@ llvm::Value *ForExprAST::codegen() {
     // Start insertion in LoopBB.
     Builder.SetInsertPoint(loopBB);
 
-    // Start the PHI node with an entry for Start.
-    llvm::PHINode *phiNode = Builder.CreatePHI(
-            llvm::Type::getDoubleTy(TheContext), 2, valueName);
-    phiNode->addIncoming(startValue, preHeaderBB);
-
     // Within the loop, the variable is defined equal to the PHI node.  If it
     // shadows an existing variable, we have to restore it, so save it now.
-    llvm::Value *oldVal = NamedValues[valueName];
-    NamedValues[valueName] = phiNode;
+    llvm::AllocaInst *oldVal = NamedValues[valueName];
+    NamedValues[valueName] = alloca;
 
     // Emit the body of the loop.  This, like any other expr, can change the
     // current BB.  Note that we ignore the value computed by the body, but don't
     // allow an error.
-    //    loopBB = Builder.GetInsertBlock();
-    //    Builder.SetInsertPoint(loopBB);
     llvm::Value *bodyValue = body->codegen();
     if (!bodyValue) return nullptr;
 
@@ -160,16 +196,17 @@ llvm::Value *ForExprAST::codegen() {
         stepValue = llvm::ConstantFP::get(TheContext, llvm::APFloat(1.0));
     }
 
-    llvm::Value *nextValue = Builder.CreateFAdd(phiNode, stepValue, "nextValue");
-
     llvm::Value *endCond = end_->codegen();
     if (!endCond) return nullptr;
+
+    llvm::Value *curVar = Builder.CreateLoad(alloca, valueName);
+    llvm::Value *nextVar = Builder.CreateFAdd(curVar, stepValue, "nextvar");
+    Builder.CreateStore(nextVar, alloca);
 
     endCond = Builder.CreateFCmpONE(
             endCond, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
 
     // Create the "after loop" block and insert it.
-    llvm::BasicBlock *loopEndBB = Builder.GetInsertBlock();
     llvm::BasicBlock *afterBB =
             llvm::BasicBlock::Create(TheContext, "afterloop", theFunction);
 
@@ -178,9 +215,6 @@ llvm::Value *ForExprAST::codegen() {
 
     // Any new code will be inserted in AfterBB.
     Builder.SetInsertPoint(afterBB);
-
-    // Add a new entry to the PHI node for the backedge.
-    phiNode->addIncoming(nextValue, loopEndBB);
 
     // Restore the unshadowed variable
     if (oldVal) {
@@ -193,7 +227,7 @@ llvm::Value *ForExprAST::codegen() {
 }
 
 llvm::Value *UnaryAST::codegen() {
-    llvm::Value* operandV = operand->codegen();
+    llvm::Value *operandV = operand->codegen();
     if (!operandV) return nullptr;
 
     llvm::Function *op = getFunction(std::string("unary") + this->oper);
@@ -202,6 +236,24 @@ llvm::Value *UnaryAST::codegen() {
 }
 
 llvm::Value *BinaryAST::codegen() {
+    if (op == "=") {
+        VariableAST *lhse = dynamic_cast<VariableAST *>(LHS.get());
+        if (!lhse) {
+            return LogErrorV("Destination of '=' must be a variable.");
+        }
+
+        llvm::Value *val = RHS->codegen();
+        if (!val) return nullptr;
+
+        llvm::Value *variable = NamedValues[lhse->getName()];
+        if (!variable) {
+            return LogErrorV("Unknown variable name.");
+        }
+
+        Builder.CreateStore(val, variable);
+        return val;
+    }
+
     llvm::Value *L = LHS->codegen();
     llvm::Value *R = RHS->codegen();
 
@@ -289,8 +341,14 @@ llvm::Function *FunctionAST::codegen() {
 
     // Record the function arguments in the NamedValues map.
     NamedValues.clear();
-    for (auto &Arg : TheFunction->args())
-        NamedValues[Arg.getName()] = &Arg;
+    for (auto &Arg : TheFunction->args()) {
+        // Create alloc for arguments
+        llvm::AllocaInst *alloc = CreateEntryBlockAlloca(TheFunction, Arg.getName());
+
+        // store the initial value into the alloca.
+        Builder.CreateStore(&Arg, alloc);
+        NamedValues[Arg.getName()] = alloc;
+    }
 
     if (llvm::Value *RetVal = body->codegen()) {
         // Finish off the function.
@@ -300,7 +358,7 @@ llvm::Function *FunctionAST::codegen() {
         verifyFunction(*TheFunction);
 
         // Optimize the function.
-        TheFPM->run(*TheFunction);
+//        TheFPM->run(*TheFunction);
 
         return TheFunction;
     }
@@ -314,29 +372,34 @@ void InitializeModuleAndPassManager(void) {
     // Open a new module.
     TheModule = std::make_unique<llvm::Module>("zxy", TheContext);
     // Setup the data layout for the JIT
-    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+//    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
 
+#if 0
     // Create a new pass manager attached to it.
     TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
 
+    // Promote allocas to registers.
+    TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+
     // Do simple "peephole" optimizations and bit-twiddling optzns.
     TheFPM->add(llvm::createInstructionCombiningPass());
+
     // Reassociate expressions.
     TheFPM->add(llvm::createReassociatePass());
+
     // Eliminate Common SubExpressions.
     TheFPM->add(llvm::createGVNPass());
+
     // Simplify the control flow graph (deleting unreachable blocks, etc).
     TheFPM->add(llvm::createCFGSimplificationPass());
 
     TheFPM->doInitialization();
-
+#endif
 }
 
 void MidInit() {
-    ModuleInit();
-    JITInit();
-    TheJIT = std::make_unique<llvm::orc::KaleidoscopeJIT>();
-    assert(TheJIT != nullptr);
+//    JITInit();
+//    TheJIT = std::make_unique<llvm::orc::KaleidoscopeJIT>();
 
     InitializeModuleAndPassManager();
 

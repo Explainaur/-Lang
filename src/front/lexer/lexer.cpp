@@ -14,7 +14,8 @@ namespace front {
     };
 
     const std::string Lexer::keywords[] = {
-            "def", "extern", "if", "else", "then", "for", "in", "binary", "unary"
+            "def", "extern", "if", "else", "then", "for",
+            "in", "binary", "unary", "var"
     };
 
     void Lexer::nextLine() {
@@ -100,7 +101,7 @@ namespace front {
     }
 
     bool Lexer::isOper(const std::string &value) {
-        for (auto i : Lexer::operators) {
+        for (const auto& i : Lexer::operators) {
             if (i == value) {
                 return true;
             }
@@ -109,7 +110,7 @@ namespace front {
     }
 
     bool Lexer::isKeyword(const std::string &value) {
-        for (auto i : Lexer::keywords) {
+        for (const auto& i : Lexer::keywords) {
             if (i == value) {
                 return true;
             }

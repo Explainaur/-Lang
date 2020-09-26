@@ -5,10 +5,11 @@
 #ifndef _LANG_AST_H
 #define _LANG_AST_H
 
+#include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
+#include <utility>
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -52,6 +53,17 @@ namespace front {
 
         llvm::Value *codegen() override;
 
+        std::string getName() { return value; }
+    };
+
+    class VariableDefineAST : public ExprAST {
+        std::vector<std::pair<std::string, ASTPtr>> variables;
+        ASTPtr body;
+    public:
+        VariableDefineAST(std::vector<std::pair<std::string, ASTPtr>> variables_, ASTPtr body_) :
+                variables(std::move(variables_)), body(std::move(body_)) {}
+
+        llvm::Value *codegen() override;
     };
 
     class UnaryAST : public ExprAST {

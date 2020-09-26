@@ -45,6 +45,10 @@ namespace front {
 
         bool isIn();
 
+        bool isEnd();
+
+        bool isVar();
+
         bool isUnary();
 
         void setPrecedence();
@@ -80,6 +84,8 @@ namespace front {
         ASTPtr ParseNumber();
 
         ASTPtr ParseVariable();
+
+        ASTPtr ParseVariableDefine();
 
         ASTPtr ParseExpression();
 

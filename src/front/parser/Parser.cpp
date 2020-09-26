@@ -14,6 +14,7 @@ namespace front {
     };
 
     void Parser::setPrecedence() {
+        BinopPrecedence["="] = 2;
         BinopPrecedence["<"] = 10;
         BinopPrecedence[">"] = 10;
         BinopPrecedence["+"] = 20;
@@ -129,6 +130,22 @@ namespace front {
         return false;
     }
 
+    bool Parser::isEnd() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "end") {
+            return true;
+        }
+        return false;
+    }
+
+    bool Parser::isVar() {
+        if (curToken.getTokenType() == TokenType::Keyword &&
+            curToken.getKeywordValue() == "var") {
+            return true;
+        }
+        return false;
+    }
+
     void PrintEvaluate(double result) {
         auto green = Color::Modifier(Color::Code::FG_GREEN);
         auto red = Color::Modifier(Color::Code::FG_RED);
@@ -184,6 +201,45 @@ namespace front {
         return std::make_shared<CallAST>(identName, args);
     }
 
+    ASTPtr Parser::ParseVariableDefine() {
+        nextToken();
+
+        std::vector<std::pair<std::string, ASTPtr>> varNames;
+
+        if (curToken.getTokenType() != TokenType::Identifier) {
+            return LogError("Expected identifier after var.");
+        }
+        while (true) {
+            std::string name = curToken.getIdentValue();
+            nextToken();    // eat var name
+
+            ASTPtr init = nullptr;
+            if (isEqualSign()) {
+                nextToken();    // eat '='
+                init = ParseExpression();
+                if (!init) return nullptr;
+            }
+            varNames.push_back(std::make_pair(name, init));
+
+            if (!isComma()) break;
+
+            nextToken();    // eat ','
+            if (curToken.getTokenType() != TokenType::Identifier) {
+                return LogError("Expected identifier after var.");
+            }
+        }
+
+        if (!isIn()) {
+            return LogError("Expected 'in' keyword after var");
+        }
+
+        nextToken();    // eat 'end'
+
+        ASTPtr body = ParseExpression();
+
+        return std::make_shared<VariableDefineAST>(varNames, body);
+    }
+
     ASTPtr Parser::ParseParenExpr() {
         nextToken();    // eat '('
         auto expr = ParseExpression();
@@ -209,6 +265,8 @@ namespace front {
             return ParseIfExpr();
         } else if (isFor()) {
             return ParseForExpr();
+        } else if (isVar()) {
+            return ParseVariableDefine();
         } else {
             return LogError("Unknow type when parsing expression.");
         }
@@ -401,9 +459,9 @@ namespace front {
     void Parser::HandleDefinition() {
         if (auto FnAST = ParseDefine()) {
             if (auto *FnIR = FnAST->codegen()) {
-                FnIR->print(llvm::errs());
-                TheJIT->addModule(std::move(TheModule));
-                InitializeModuleAndPassManager();
+//                FnIR->print(llvm::errs());
+//                TheJIT->addModule(std::move(TheModule));
+//                InitializeModuleAndPassManager();
                 return;
             }
         } else {
@@ -428,8 +486,10 @@ namespace front {
     void Parser::HandleTopLevelExpression() {
         // Evaluate a top-level expression into an anonymous function.
         if (auto FnAST = ParseTopLevelExpr()) {
+//            FnAST->codegen();
+#if 0
             if (auto *FnIR = FnAST->codegen()) {
-//                FnIR->print(llvm::errs());
+                FnIR->print(llvm::errs());
 
                 // JIT the module containing the anonymous expression, keeping a handle so
                 // we can free it later.
@@ -448,9 +508,9 @@ namespace front {
 
                 // Delete the anonymous expression module from the JIT.
                 TheJIT->removeModule(H);
-
                 return;
             }
+#endif
         } else {
             // Skip token for error recovery.
             nextToken();

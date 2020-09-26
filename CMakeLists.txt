@@ -18,5 +18,20 @@ message(STATUS "Include Directory ${LLVM_INCLUDE_DIRS}")
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(_Lang ${SOURCES})
-llvm_map_components_to_libnames(LLVM_LIBS core support executionengine passes interpreter orcjit x86asmparser x86disassembler x86codegen target)
+llvm_map_components_to_libnames(LLVM_LIBS core support executionengine passes interpreter
+        orcjit x86asmparser x86disassembler x86codegen target
+        aarch64asmparser aarch64codegen aarch64desc aarch64disassembler aarch64info aarch64utils target
+        amdgpuasmparser amdgpucodegen amdgpudesc amdgpudisassembler amdgpuinfo amdgpuutils
+        armasmparser armcodegen armdesc armdisassembler arminfo armutils asmparser asmprinter
+        bitreader bitstreamreader bitwriter  bpfasmparser bpfcodegen bpfdesc bpfdisassembler bpfinfo
+        hexagonasmparser hexagoncodegen hexagondesc hexagondisassembler hexagoninfo
+        lanaiasmparser lanaicodegen lanaidesc lanaidisassembler lanaiinfo libdriver lineeditor linker lto
+        mipsasmparser mipscodegen mipsdesc mipsdisassembler mipsinfo mirparser
+        msp430asmparser msp430codegen msp430desc msp430disassembler msp430info
+        nvptxcodegen nvptxdesc nvptxinfo powerpcasmparser powerpccodegen powerpcdesc powerpcdisassembler powerpcinfo profiledata
+        riscvasmparser riscvcodegen riscvdesc riscvdisassembler riscvinfo riscvutils
+        sparcasmparser sparccodegen sparcdesc sparcdisassembler sparcinfo
+        systemzasmparser systemzcodegen systemzdesc systemzdisassembler systemzinfo
+        webassemblyasmparser webassemblycodegen webassemblydesc webassemblydisassembler webassemblyinfo
+        xcorecodegen xcoredesc xcoredisassembler xcoreinfo)
 target_link_libraries(_Lang ${LLVM_LIBS})
